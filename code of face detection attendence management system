@@ -1,0 +1,277 @@
+import streamlit as st
+import cv2
+import numpy as np
+import os
+from datetime import datetime
+import pandas as pd
+from utils import save_encoding, mark_attendance_log, get_attendance_history, load_encodings, recognize_face
+
+# Page Config
+st.set_page_config(
+    page_title="NeuroAttend | AI Attendance",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
+# Helper for robust camera access
+def get_camera():
+    # Try indices 0, 1, 2
+    for index in [0, 1, 2]:
+        # Try DSHOW first (Windows)
+        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        if cap.isOpened():
+             return cap
+        # Try default
+        cap = cv2.VideoCapture(index)
+        if cap.isOpened():
+             return cap
+    return None
+
+# Load Custom CSS
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+load_css("style.css")
+
+# Sidebar
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/3665/3665939.png", width=100)
+    st.title("NeuroAttend")
+    st.info("High-Accuracy Bio-ID System")
+    
+    menu = ["Home", "Student Registration", "Mark Attendance", "Records"]
+    choice = st.radio("Navigation", menu)
+
+    st.markdown("---")
+    st.write("© 2025 NeuroAttend System")
+
+# Home Page
+if choice == "Home":
+    st.title("🧠 NeuroAttend System")
+    st.markdown("### Next-Gen Face Recognition Authentication")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="card">
+            <h3>🧬 Bioinformatics Encoding</h3>
+            <p>Utilizing State-of-the-Art CNN models to generate 128-d face encodings for verified identity.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <h3>⚡ Real-Time Latency</h3>
+            <p>Optimized for millisecond-level inference and instant attendance logging.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown("""
+        <div class="card">
+            <h3>🛡️ encrypted Storage</h3>
+            <p>Biometric data is hashed and encoded, ensuring maximum privacy and security.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.image("https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5", caption="Secure Biometric Scanning", use_container_width=True)
+
+# Registration Page
+elif choice == "Student Registration":
+    st.title("📝 Student Registration")
+    st.sidebar.info("New Registration Mode Active")
+
+    col1, col2 = st.columns([1, 1.5])
+    
+    with col1:
+        st.markdown("### Profile Details")
+        st.info("Please fill in the details before capturing.")
+        name = st.text_input("Full Name", placeholder="e.g. John Doe")
+        student_id = st.text_input("Student ID", placeholder="e.g. ST12345")
+    
+    with col2:
+        st.markdown("### Biometric Capture")
+        # Use native Streamlit Camera Input for better UI/UX
+        img_file_buffer = st.camera_input("Take a Picture", key="camera")
+    
+    if img_file_buffer is not None:
+        if name and student_id:
+            # Convert to CV2 format
+            bytes_data = img_file_buffer.getvalue()
+            cv2_img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+            
+            # Show preview
+            # st.image(cv2_img, channels="BGR", caption="Captured for Encoding", width=250)
+            
+            if st.button("✅ Register and Save Bio-Encoding"):
+                with st.spinner("Encrypting and Saving Biometric Data..."):
+                     # Utils expects an image (numpy array) or path
+                     success = save_encoding(name, student_id, cv2_img)
+                
+                if success:
+                    st.success(f"SUCCESS: {name} registered successfully!")
+                    st.balloons()
+                else:
+                    st.error("Face not detected! Please look directly at the camera and try again.")
+        else:
+             st.warning("⚠️ Please Enter Name and ID first.")
+
+# Attendance Page
+elif choice == "Mark Attendance":
+    st.title("📸 Real-Time Automatic Attendance")
+    
+    st.markdown("### 👁️ Live Biometric Scanning Active")
+    st.info("Ensure you are well-lit. Attendance will mark automatically when your face is recognized.")
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        # Camera Placeholder
+        stframe = st.image([])
+        
+        # Stop button in a dedicated container above or below
+        run = st.checkbox('🔴 Start/Stop Camera', value=True)
+
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <h3>Bioinformatics Status</h3>
+            <p id="status_text">System Ready...</p>
+        </div>
+        """, unsafe_allow_html=True)
+        status_placeholder = st.empty()
+        
+    cap = None
+    if run:
+        cap = get_camera()
+        
+        if cap is None:
+             st.error("Camera is unavailable. Check connection or close other apps.")
+        else:
+            from utils import recognize_face, mark_attendance_log
+
+            frame_count = 0
+            while run:
+                ret, frame = cap.read()
+                if not ret:
+                    st.error("Cannot access camera.")
+                    break
+                    
+                frame_count += 1
+                
+                # Visualise loop
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Face Detection Helper (Fast Haar Cascade)
+                face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+                
+                # Draw boxes immediately for responsiveness
+                for (x, y, w, h) in faces:
+                    cv2.rectangle(rgb_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                
+                stframe.image(rgb_frame, channels="RGB")
+                
+                # OPTIMIZATION: Run Deep Learning only every 5 frames and only if a face is found
+                if frame_count % 5 == 0 and len(faces) > 0:
+                    status_placeholder.info("⚡ Verifying Biometrics...")
+                    
+                    # Pick the largest face (closest to camera)
+                    # faces is (x, y, w, h). area = w*h
+                    largest_face = max(faces, key=lambda f: f[2] * f[3])
+                    (x, y, w, h) = largest_face
+                    
+                    # Crop ROI for speed
+                    face_roi = frame[y:y+h, x:x+w]
+                    
+                    # Deep Recognition on specific face
+                    name, sid = recognize_face(face_roi)
+                    
+                    if name and sid and name not in ["Unknown", "No face detected", "Error", "No registered users"]:
+                        success, msg = mark_attendance_log(name, sid)
+                        
+                        if success:
+                            status_placeholder.success(f"✅ VERIFIED") 
+                            status_placeholder.markdown(f"""
+                            <div style="background-color: #d1e7dd; padding: 20px; border-radius: 10px; border-left: 5px solid #0f5132;">
+                                <h3 style="color: #0f5132; margin:0;">Attendance Marked!</h3>
+                                <p style="font-size: 1.2rem; margin:5px 0 0 0;">Name: <strong>{name}</strong></p>
+                                <p style="font-size: 1.2rem; margin:0;">Student ID: <strong>{sid}</strong></p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.balloons()
+                            run = False 
+                            st.session_state['attendance_marked'] = True
+                            cap.release()
+                            break 
+                        else:
+                            status_placeholder.warning(f"ℹ️ {msg}")
+                            # Also stop if already marked today
+                            if "already marked" in msg:
+                                 run = False
+                                 st.session_state['attendance_marked'] = True
+                                 cap.release()
+                                 break
+                                 
+                    elif name == "Unknown":
+                        status_placeholder.error(f"⚠️ Unknown Identifying... (ID: ???)")
+                    else:
+                        status_placeholder.warning("Scanning...")
+                elif len(faces) == 0:
+                     status_placeholder.info("Waiting for face...")
+                     
+            if cap.isOpened():
+                cap.release()
+
+            if 'attendance_marked' in st.session_state and st.session_state['attendance_marked']:
+                st.success("Attendance Recorded. Camera Stopped automatically.")
+                if st.button("Resume Scanning"):
+                    st.session_state['attendance_marked'] = False
+                    st.rerun()
+
+# Records Page
+elif choice == "Records":
+    st.title("📊 Attendance Records")
+    
+    # Load data
+    df = get_attendance_history()
+    
+    if not df.empty:
+        st.markdown("### 📝 Edit / Delete Records")
+        st.info("You can edit cells directly or select rows to delete.")
+        
+        # Interactive Editor
+        edited_df = st.data_editor(
+            df,
+            num_rows="dynamic", # Allow adding/deleting rows
+            use_container_width=True,
+            key="editor"
+        )
+        
+        # Save Button
+        if st.button("💾 Save Changes"):
+            try:
+                edited_df.to_csv("attendance.csv", index=False)
+                st.success("Attendance records updated successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error saving records: {e}")
+        
+        # Download
+        csv = edited_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name='attendance_export.csv',
+            mime='text/csv',
+        )
+    else:
+        st.info("No attendance records found.")
+
