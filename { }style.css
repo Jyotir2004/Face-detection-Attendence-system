@@ -1,0 +1,111 @@
+/* Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+body {
+    background-color: #ffffff;
+    /* Clean White */
+    color: #31333F;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #f8f9fa;
+    border-right: 1px solid #e9ecef;
+}
+
+/* Titles - Vibrant Gradients */
+h1,
+h2,
+h3 {
+    background: linear-gradient(120deg, #FF4B1F, #FF9068);
+    /* Orange-Red Gradient */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+/* Buttons - Eye Catching */
+.stButton>button {
+    background: linear-gradient(45deg, #FF416C, #FF4B2B);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    /* Rounded pill shape */
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 75, 43, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 75, 43, 0.5);
+}
+
+/* Inputs */
+.stTextInput>div>div>input {
+    background-color: #ffffff;
+    color: #31333F;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.stTextInput>div>div>input:focus {
+    border-color: #FF416C;
+    box-shadow: 0 0 10px rgba(255, 65, 108, 0.2);
+}
+
+/* Cards - White with Shadow */
+.card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f0f0;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.card h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(120deg, #1fa2ff, #12d8fa, #a6ffcb);
+    /* Cool Blue/Green for cards */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.card p {
+    color: #555;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Metrics */
+[data-testid="stMetricValue"] {
+    color: #FF416C;
+    font-size: 2.5rem;
+    font-weight: 800;
+}
+
+/* Success Messages */
+.stSuccess {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+/* Tables */
+[data-testid="stDataFrame"] {
+    border: none;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+}
